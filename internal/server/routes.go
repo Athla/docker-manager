@@ -3,13 +3,18 @@ package server
 import (
 	"net/http"
 
+	"github.com/charmbracelet/log"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
 	e := echo.New()
-	e.Use(middleware.Logger())
+
+	log.Info("ROUTES: Registering routes.")
+	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Format: "method=${method}, uri=${uri}, status=${status}\n",
+	}))
 	e.Use(middleware.Recover())
 
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
@@ -23,6 +28,20 @@ func (s *Server) RegisterRoutes() http.Handler {
 	e.GET("/", s.HelloWorldHandler)
 
 	e.GET("/health", s.healthHandler)
+
+	log.Info("ROUTES-API: Registering API routes.")
+	api := e.Group("/api")
+
+	users := api.Group("/user")
+	users.POST("/login", s.UserLoginHandler)
+	users.GET("/logout", s.UserLogoutHandler)
+
+	log.Info("ROUTES-API: Registering CONTAINER routes.")
+
+	containers := api.Group("/containers")
+	containers.GET("/", s.ListContainersHandler)
+	containers.POST("/create", s.CreateContainerHandler)
+	containers.DELETE("/:id", s.DeleteContainerHandler)
 
 	return e
 }

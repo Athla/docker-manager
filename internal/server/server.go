@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/charmbracelet/log"
 	_ "github.com/joho/godotenv/autoload"
 
 	"mineServers/internal/database"
@@ -20,14 +21,16 @@ type Server struct {
 }
 
 func NewServer() *http.Server {
+	ctx := context.Background()
 	port, _ := strconv.Atoi(os.Getenv("PORT"))
 	NewServer := &Server{
 		port: port,
-
-		db: database.New(),
+		ctx:  ctx,
+		db:   database.New(),
 	}
 
 	// Declare Server config
+	log.Infof("SERVER: Running at port :%d", NewServer.port)
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", NewServer.port),
 		Handler:      NewServer.RegisterRoutes(),

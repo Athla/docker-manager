@@ -184,9 +184,8 @@ func (s *ContainerHandler) DeleteAllContainersHandler(e echo.Context) error {
 }
 
 func (s *ContainerHandler) ListContainersHandler(e echo.Context) error {
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := newDockerClient(client.FromEnv)
 	if err != nil {
-		log.Warnf("CONTAINER-CLIENT: Unable to create docker client due: %s", err)
 		e.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "internal server error.",
 		})

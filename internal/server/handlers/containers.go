@@ -35,15 +35,7 @@ func NewContainerHandler(ctx context.Context) *ContainerHandler {
 	}
 }
 
-func (s *ContainerHandler) CreateContainerHandler(e echo.Context) error {
-	opts := new(CreateOptions)
-	if err := e.Bind(opts); err != nil {
-		log.Warnf("ECHO-CONTEXT: unable to bind payload due: %s", err)
-		e.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "internal server error.",
-		})
-		return err
-	}
+func parseCreateOpts(opts *CreateOptions) error {
 	if opts.Registry == "" {
 		opts.Version = "docker.io"
 	}
@@ -53,17 +45,58 @@ func (s *ContainerHandler) CreateContainerHandler(e echo.Context) error {
 	}
 
 	if opts.Image == "" {
-		log.Warn("CONTAINER-VALIDATOR: Image name cannot be empty")
+		log.Warn("CONTAINER: Image name cannot be empty")
+		return fmt.Errorf("Image name is required.")
+	}
+	return nil
+}
+
+func newDockerClient(opts client.Opt) (*client.Client, error) {
+	cli, err := client.NewClientWithOpts(client.FromEnv)
+	if err != nil {
+		log.Warnf("CONTAINER: Unable to create docker client due: %s", err)
+		return nil, err
+	}
+
+	return cli, nil
+}
+
+func createDockerContainer(ctx context.Context, client *client.Client, reader io.ReadCloser, opts *CreateOptions, imageName string) (*container.CreateResponse, error) {
+	io.Copy(io.Discard, reader)
+	config := &container.Config{
+		Image: imageName,
+		Cmd:   opts.Commands,
+	}
+
+	resp, err := client.ContainerCreate(ctx, config, nil, nil, nil, "")
+	if err != nil {
+		log.Warnf("CONTAINER: Unable to create container due: %s", err)
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
+func (s *ContainerHandler) CreateContainerHandler(e echo.Context) error {
+	// Parse opts
+	opts := new(CreateOptions)
+	if err := e.Bind(opts); err != nil {
+		log.Warnf("ECHO: unable to bind payload due: %s", err)
+		e.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "internal server error.",
+		})
+		return err
+	}
+
+	if err := parseCreateOpts(opts); err != nil {
 		e.JSON(http.StatusBadRequest, map[string]string{
 			"error": "image name is required",
 		})
-		return fmt.Errorf("Image name is required.")
 	}
 
 	// This here allows me to interact with the docker hub without needing to do http requests each time
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := newDockerClient(client.FromEnv)
 	if err != nil {
-		log.Warnf("CONTAINER-CLIENT: Unable to create docker client due: %s", err)
 		e.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "internal server error.",
 		})
@@ -71,10 +104,11 @@ func (s *ContainerHandler) CreateContainerHandler(e echo.Context) error {
 	}
 	defer cli.Close()
 
+	// Parse image name - service
 	imageName := fmt.Sprintf("%s/%s:%s", opts.Registry, opts.Image, opts.Version)
-	reader, err := cli.ImagePull(s.ctx, imageName, image.PullOptions{})
+
+	reader, err := s.svc.PullContainerImage(cli, s.ctx, imageName, image.PullOptions{})
 	if err != nil {
-		log.Warnf("CONTAINER-READER: Unable to pull docker image '%s' due: %s", imageName, err)
 		e.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "internal server error.",
 		})
@@ -82,33 +116,25 @@ func (s *ContainerHandler) CreateContainerHandler(e echo.Context) error {
 	}
 	defer reader.Close()
 
-	io.Copy(io.Discard, reader)
-	config := &container.Config{
-		Image: imageName,
-		Cmd:   opts.Commands,
-	}
-
-	resp, err := cli.ContainerCreate(s.ctx, config, nil, nil, nil, "")
+	resp, err := createDockerContainer(s.ctx, cli, reader, opts, imageName)
 	if err != nil {
-		log.Warnf("CONTAINER-CREATOR: Unable to create container due: %s", err)
 		e.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "internal server error.",
 		})
+
 		return err
 	}
 
-	log.Info("CONTAINER-SERVICER: Container ID: %s", resp.ID)
-
+	log.Info("CONTAINER: Container ID: %s", resp.ID)
 	if err := cli.ContainerStart(s.ctx, resp.ID, container.StartOptions{}); err != nil {
-		log.Warnf("CONTAINER-STARTER: Unable to start container due: %s", err)
+		log.Warnf("CONTAINER: Unable to start container due: %s", err)
 		e.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "internal server error.",
 		})
 		return err
 	}
 
-	log.Info("CONTAINER-SERVICE: Container created sucessfully!")
-
+	log.Info("CONTAINER: Container created sucessfully!")
 	e.JSON(http.StatusCreated, map[string]string{
 		"success": fmt.Sprintf("created container with ID: %s sucessfully!", resp.ID),
 	})

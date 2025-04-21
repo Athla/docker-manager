@@ -7,7 +7,5 @@ type ImagesService struct {
 }
 
 func NewImageService(ctx context.Context) *ImagesService {
-	return &ImagesService{
-		ctx: ctx,
-	}
+	return &ImagesService{}
 }

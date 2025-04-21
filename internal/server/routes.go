@@ -1,6 +1,7 @@
 package server
 
 import (
+	"mineServers/internal/server/handlers"
 	"net/http"
 
 	"github.com/charmbracelet/log"
@@ -31,17 +32,21 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	log.Info("ROUTES-API: Registering API routes.")
 	api := e.Group("/api")
-
-	users := api.Group("/user")
-	users.POST("/login", s.UserLoginHandler)
-	users.GET("/logout", s.UserLogoutHandler)
-
+	// Is it needed? It's a localstack thing
+	// users := api.Group("/user")
+	// users.POST("/login", s.UserLoginHandler)
+	// users.GET("/logout", s.UserLogoutHandler)
 	log.Info("ROUTES-API: Registering CONTAINER routes.")
 
+	containerHandler := handlers.NewContainerHandler(s.ctx)
+
 	containers := api.Group("/containers")
-	containers.GET("/", s.ListContainersHandler)
-	containers.POST("/create", s.CreateContainerHandler)
-	containers.DELETE("/:id", s.DeleteContainerHandler)
+	containers.GET("/", containerHandler.ListContainersHandler)
+	containers.POST("/create", containerHandler.CreateContainerHandler)
+	containers.DELETE("/:id", containerHandler.DeleteContainerHandler)
+
+	// images := api.Group("/images")
+	// images.GET("/", s)
 
 	return e
 }

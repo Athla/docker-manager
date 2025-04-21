@@ -1,9 +1,11 @@
-package server
+package handlers
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"mineServers/internal/models"
+	"mineServers/internal/service"
 	"net/http"
 
 	"github.com/charmbracelet/log"
@@ -13,6 +15,11 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type ContainerHandler struct {
+	ctx context.Context
+	svc *service.ContainerService
+}
+
 type CreateOptions struct {
 	Registry string   `json:"registry"`
 	Image    string   `json:"image"`
@@ -20,7 +27,15 @@ type CreateOptions struct {
 	Commands []string `json:"commands"`
 }
 
-func (s *Server) CreateContainerHandler(e echo.Context) error {
+func NewContainerHandler(ctx context.Context) *ContainerHandler {
+	svc := service.NewContainerService(ctx)
+	return &ContainerHandler{
+		ctx: ctx,
+		svc: svc,
+	}
+}
+
+func (s *ContainerHandler) CreateContainerHandler(e echo.Context) error {
 	opts := new(CreateOptions)
 	if err := e.Bind(opts); err != nil {
 		log.Warnf("ECHO-CONTEXT: unable to bind payload due: %s", err)
@@ -45,6 +60,7 @@ func (s *Server) CreateContainerHandler(e echo.Context) error {
 		return fmt.Errorf("Image name is required.")
 	}
 
+	// This here allows me to interact with the docker hub without needing to do http requests each time
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		log.Warnf("CONTAINER-CLIENT: Unable to create docker client due: %s", err)
@@ -100,7 +116,7 @@ func (s *Server) CreateContainerHandler(e echo.Context) error {
 	return nil
 }
 
-func (s *Server) DeleteContainerHandler(e echo.Context) error {
+func (s *ContainerHandler) DeleteContainerHandler(e echo.Context) error {
 	id := e.Param("id")
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
@@ -133,7 +149,7 @@ func (s *Server) DeleteContainerHandler(e echo.Context) error {
 
 	return nil
 }
-func (s *Server) DeleteAllContainersHandler(e echo.Context) error {
+func (s *ContainerHandler) DeleteAllContainersHandler(e echo.Context) error {
 
 	e.JSON(http.StatusNotImplemented, map[string]string{
 		"message": "might not be implemented due the danger of it.",
@@ -141,7 +157,7 @@ func (s *Server) DeleteAllContainersHandler(e echo.Context) error {
 	return nil
 }
 
-func (s *Server) ListContainersHandler(e echo.Context) error {
+func (s *ContainerHandler) ListContainersHandler(e echo.Context) error {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		log.Warnf("CONTAINER-CLIENT: Unable to create docker client due: %s", err)
@@ -179,4 +195,4 @@ func (s *Server) ListContainersHandler(e echo.Context) error {
 	e.JSON(http.StatusOK, out)
 	return nil
 }
-func (s *Server) GetContainerHandler(e echo.Context) {}
+func (s *ContainerHandler) GetContainerHandler(e echo.Context) {}

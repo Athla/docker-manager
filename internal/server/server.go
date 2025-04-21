@@ -15,9 +15,11 @@ import (
 )
 
 type Server struct {
-	port int
-	ctx  context.Context
-	db   database.Service
+	port              int
+	ctx               context.Context
+	db                database.Service
+	containersHandler any
+	imagesHandler     any
 }
 
 func NewServer() *http.Server {

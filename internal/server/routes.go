@@ -32,17 +32,15 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	log.Info("ROUTES-API: Registering API routes.")
 	api := e.Group("/api")
-	// Is it needed? It's a localstack thing
-	// users := api.Group("/user")
-	// users.POST("/login", s.UserLoginHandler)
-	// users.GET("/logout", s.UserLogoutHandler)
+
 	log.Info("ROUTES-API: Registering CONTAINER routes.")
 
 	containerHandler := handlers.NewContainerHandler(s.ctx)
 
 	containers := api.Group("/containers")
 	containers.GET("/", containerHandler.ListContainersHandler)
-	containers.POST("/create", containerHandler.CreateContainerHandler)
+	containers.GET("/:id", containerHandler.StreamLogContainers)
+	containers.POST("/", containerHandler.CreateContainerHandler)
 	containers.DELETE("/:id", containerHandler.DeleteContainerHandler)
 
 	// images := api.Group("/images")

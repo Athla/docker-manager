@@ -12,14 +12,14 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 
 	"mineServers/internal/database"
+	"mineServers/internal/server/handlers"
 )
 
 type Server struct {
 	port              int
 	ctx               context.Context
 	db                database.Service
-	containersHandler any
-	imagesHandler     any
+	containersHandler *handlers.ContainerHandler
 }
 
 func NewServer() *http.Server {

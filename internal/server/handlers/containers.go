@@ -7,6 +7,7 @@ import (
 	"mineServers/internal/models"
 	"mineServers/internal/service"
 	"net/http"
+	"strings"
 
 	"github.com/charmbracelet/log"
 	"github.com/docker/docker/api/types/container"
@@ -52,7 +53,7 @@ func parseCreateOpts(opts *CreateOptions) error {
 }
 
 func newDockerClient(opts client.Opt) (*client.Client, error) {
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := client.NewClientWithOpts(opts)
 	if err != nil {
 		log.Warnf("CONTAINER: Unable to create docker client due: %s", err)
 		return nil, err
@@ -92,6 +93,8 @@ func (s *ContainerHandler) CreateContainerHandler(e echo.Context) error {
 		e.JSON(http.StatusBadRequest, map[string]string{
 			"error": "image name is required",
 		})
+
+		return err
 	}
 
 	// This here allows me to interact with the docker hub without needing to do http requests each time
@@ -125,7 +128,7 @@ func (s *ContainerHandler) CreateContainerHandler(e echo.Context) error {
 		return err
 	}
 
-	log.Info("CONTAINER: Container ID: %s", resp.ID)
+	log.Infof("CONTAINER: Container ID: %s", resp.ID)
 	if err := cli.ContainerStart(s.ctx, resp.ID, container.StartOptions{}); err != nil {
 		log.Warnf("CONTAINER: Unable to start container due: %s", err)
 		e.JSON(http.StatusInternalServerError, map[string]string{
@@ -136,7 +139,7 @@ func (s *ContainerHandler) CreateContainerHandler(e echo.Context) error {
 
 	log.Info("CONTAINER: Container created sucessfully!")
 	e.JSON(http.StatusCreated, map[string]string{
-		"success": fmt.Sprintf("created container with ID: %s sucessfully!", resp.ID),
+		"success": fmt.Sprintf("created container with ID: %s successfully!", resp.ID),
 	})
 
 	return nil
@@ -220,4 +223,63 @@ func (s *ContainerHandler) ListContainersHandler(e echo.Context) error {
 	e.JSON(http.StatusOK, out)
 	return nil
 }
-func (s *ContainerHandler) GetContainerHandler(e echo.Context) {}
+
+func (s *ContainerHandler) StreamLogContainers(e echo.Context) error {
+	containerId := e.Param("id")
+
+	cli, err := newDockerClient(client.FromEnv)
+	if err != nil {
+		log.Warnf("CONTAINER-CLIENT: Unable to create docker client due: %s", err)
+		e.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "internal server error.",
+		})
+		return err
+	}
+	defer cli.Close()
+
+	options := container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+		Tail:       "20",
+	}
+
+	reader, err := cli.ContainerLogs(s.ctx, containerId, options)
+	if err != nil {
+		log.Warnf("CONTAINER-CLIENT: Unable to create docker reader due: %s", err)
+		e.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "internal server error.",
+		})
+
+		return err
+	}
+	defer reader.Close()
+
+	res := e.Response()
+	res.Header().Set(echo.HeaderContentType, "text/event-stream")
+	res.Header().Set("Cache-Control", "no-cache")
+	res.Header().Set("Connection", "keep-alive")
+	res.WriteHeader(http.StatusOK)
+
+	flusher, ok := res.Writer.(http.Flusher)
+	if !ok {
+		return e.NoContent(http.StatusInternalServerError)
+	}
+
+	buf := make([]byte, 4096)
+	for {
+		n, err := reader.Read(buf)
+		if n > 0 {
+			logLine := string(buf[:n])
+
+			fmt.Fprintf(res, "data: %s\n\n", logLine)
+			flusher.Flush()
+		}
+
+		if err != nil {
+			break
+		}
+	}
+
+	return nil
+}

@@ -38,10 +38,13 @@ func (s *Server) RegisterRoutes() http.Handler {
 	containerHandler := handlers.NewContainerHandler(s.ctx)
 
 	containers := api.Group("/containers")
+	containers.POST("/", containerHandler.CreateContainerHandler)
 	containers.GET("/", containerHandler.ListContainersHandler)
 	containers.GET("/:id", containerHandler.StreamLogContainers)
-	containers.POST("/", containerHandler.CreateContainerHandler)
 	containers.DELETE("/:id", containerHandler.DeleteContainerHandler)
+	containers.POST("/:id/start", containerHandler.StartContainer)
+	containers.POST("/:id/stop", containerHandler.StopContainer)
+	containers.POST("/:id/restart", containerHandler.RestartContainer)
 
 	// images := api.Group("/images")
 	// images.GET("/", s)

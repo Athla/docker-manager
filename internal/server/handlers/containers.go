@@ -7,7 +7,6 @@ import (
 	"mineServers/internal/models"
 	"mineServers/internal/service"
 	"net/http"
-	"strings"
 
 	"github.com/charmbracelet/log"
 	"github.com/docker/docker/api/types/container"
@@ -282,4 +281,85 @@ func (s *ContainerHandler) StreamLogContainers(e echo.Context) error {
 	}
 
 	return nil
+}
+
+func (s *ContainerHandler) StartContainer(e echo.Context) error {
+	id := e.Param("id")
+	cli, err := newDockerClient(client.FromEnv)
+	if err != nil {
+		log.Warnf("CONTAINER-CLIENT: Unable to create docker client due: %s", err)
+		return e.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "internal server error",
+		})
+	}
+
+	defer cli.Close()
+
+	if err := cli.ContainerStart(s.ctx, id, container.StartOptions{}); err != nil {
+		log.Warnf("CONTAINER-CLIENT: Unable to start docker container due: %s", err)
+		return e.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to start container",
+		})
+	}
+
+	log.Info("CONTAINER-START: Container '%s' started successfully!", id)
+
+	return e.JSON(http.StatusOK, map[string]string{
+		"success": fmt.Sprintf("started containerd with ID: %s", id),
+	})
+}
+
+func (s *ContainerHandler) StopContainer(e echo.Context) error {
+	id := e.Param("id")
+	cli, err := newDockerClient(client.FromEnv)
+	if err != nil {
+		log.Warnf("CONTAINER-CLIENT: Unable to create docker client due: %s", err)
+		return e.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "internal server error",
+		})
+	}
+
+	defer cli.Close()
+
+	timeout := 10
+	if err := cli.ContainerStop(s.ctx, id, container.StopOptions{Timeout: &timeout}); err != nil {
+		log.Warnf("CONTAINER-CLIENT: Unable to stop docker container due: %s", err)
+		return e.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to stop container",
+		})
+	}
+
+	log.Info("CONTAINER-STOP: Container '%s' stopped successfully!", id)
+
+	return e.JSON(http.StatusOK, map[string]string{
+		"success": fmt.Sprintf("stopped container with ID: %s", id),
+	})
+}
+
+func (s *ContainerHandler) RestartContainer(e echo.Context) error {
+	id := e.Param("id")
+	cli, err := newDockerClient(client.FromEnv)
+	if err != nil {
+		log.Warnf("CONTAINER-CLIENT: Unable to create docker client due: %s", err)
+		return e.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "internal server error",
+		})
+	}
+
+	defer cli.Close()
+
+	timeout := 10
+	if err := cli.ContainerRestart(s.ctx, id, container.StopOptions{Timeout: &timeout}); err != nil {
+		log.Warnf("CONTAINER-RESTART: Unable to restart docker container due: %s", err)
+		return e.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to stop container",
+		})
+	}
+
+	log.Info("CONTAINER-RESTART: Container '%s' restarted successfully!", id)
+
+	return e.JSON(http.StatusOK, map[string]string{
+		"success": fmt.Sprintf("restarted container with ID: %s", id),
+	})
+
 }

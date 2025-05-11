@@ -114,6 +114,7 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
           </nav>
         </div>
 
+
         <div className="border-t border-gray-200 p-4 bg-gray-50 flex justify-between">
           <div className="flex space-x-3">
             {container.state !== 'running' && (

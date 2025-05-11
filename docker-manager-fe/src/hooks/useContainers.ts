@@ -116,6 +116,28 @@ export const useContainers = () => {
     }
   }, [fetchContainers])
 
+  // containers.GET("/:id/logs", containerHandler.StreamLogContainers)
+  const fetchContainerLogs = useCallback(async (containerId: string) => {
+    const [logs, setLogs] = useState<string[]>([])
+    const eventSource = new EventSource(`${API_URL}/containers/${containerId}/logs`)
+    eventSource.onmessage = (event: MessageEvent) => {
+      try {
+        const
+
+      } catch {
+
+      }
+    }
+  }, [])
+
+  const fetchContainerMetrics = useCallback(async (containerId: string) => {
+    try {
+
+    } catch {
+
+    }
+  }, [])
+
   return {
     containers,
     loading,
@@ -125,6 +147,9 @@ export const useContainers = () => {
     stopContainer,
     restartContainer,
     deleteContainer,
-    createContainer
-  };
+    createContainer,
+    fetchContainerLogs,
+    fetchContainerMetrics
+  }
+    ;
 };

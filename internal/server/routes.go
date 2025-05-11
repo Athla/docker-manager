@@ -42,12 +42,13 @@ func (s *Server) RegisterRoutes() http.Handler {
 	containers.GET("/", containerHandler.ListContainersHandler)
 
 	// Container Specific Ops
-	containers.GET("/:id/logs", containerHandler.StreamLogContainers)
 	containers.DELETE("/:id", containerHandler.DeleteContainerHandler)
 	containers.POST("/:id/start", containerHandler.StartContainer)
 	containers.POST("/:id/stop", containerHandler.StopContainer)
 	containers.POST("/:id/restart", containerHandler.RestartContainer)
 	containers.GET("/:id/stats", containerHandler.GetContainerStats)
+	// SSE
+	containers.GET("/:id/logs", containerHandler.StreamLogContainers)
 
 	// containers.GET("/:id/stats", containerHandler.StreamContainerStat)
 

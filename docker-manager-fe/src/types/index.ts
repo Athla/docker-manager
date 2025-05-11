@@ -5,8 +5,8 @@ export interface Container {
   command: string;
   created: string;
   labels: Record<string, string>;
-  state: string;
-  status: 'running' | 'stopped' | 'paused' | 'exited';
+  state: 'running' | 'stopped' | 'paused' | 'exited';
+  status: string;
   ports: Record<string, string>;
   Stats: ContainerStats;
 }

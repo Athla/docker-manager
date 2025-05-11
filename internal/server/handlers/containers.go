@@ -157,6 +157,30 @@ func (s *ContainerHandler) ListContainersHandler(e echo.Context) error {
 
 	var out []models.Container
 	for _, box := range containers {
+		statsReader, err := cli.ContainerStats(s.ctx, box.ID, false)
+		if err != nil {
+			log.Warnf("CONTAINER-CLIENT: Unable to get container stats: %s", err)
+			return e.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "unable to get container stats",
+			})
+		}
+
+		var containerStats container.StatsResponse
+		if err := json.NewDecoder(statsReader.Body).Decode(&containerStats); err != nil {
+			log.Warnf("CONTAINER-CLIENT: Unable to decode stats: %s", err)
+			return e.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "unable to get container stats",
+			})
+		}
+
+		statsResponse := models.ContainerStats{
+			CpuUsage: containerStats.CPUStats.CPUUsage.TotalUsage,
+			MemUsage: containerStats.MemoryStats.Usage,
+			CpuTotal: containerStats.CPUStats.SystemUsage,
+			MemTotal: containerStats.MemoryStats.Limit,
+		}
+		parsedPorts := s.svc.ParsePorts(box.Ports)
+
 		curr := models.Container{
 			ID:      box.ID,
 			Names:   box.Names,
@@ -166,6 +190,8 @@ func (s *ContainerHandler) ListContainersHandler(e echo.Context) error {
 			Labels:  box.Labels,
 			State:   box.State,
 			Status:  box.Status,
+			Ports:   parsedPorts,
+			Stats:   statsResponse,
 		}
 		out = append(out, curr)
 	}

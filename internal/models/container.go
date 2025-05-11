@@ -8,7 +8,7 @@ type Container struct {
 	Created int64             `json:"created"`
 	Labels  map[string]string `json:"labels"`
 	State   string            `json:"state"`
-	Status  string            `json:"status"`
+	Status  string            `json:"status"` // "created" | "running" | "paused" | "restarting" | "removing" | "exited" | "dead"
 	Ports   map[string]string `json:"ports"`
 	Stats   ContainerStats
 }

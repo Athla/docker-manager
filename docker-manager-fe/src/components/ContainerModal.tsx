@@ -116,7 +116,7 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
 
         <div className="border-t border-gray-200 p-4 bg-gray-50 flex justify-between">
           <div className="flex space-x-3">
-            {container.status !== 'running' && (
+            {container.state !== 'running' && (
               <Button
                 variant="primary"
                 onClick={() => handleAction('start')}
@@ -127,9 +127,9 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
               </Button>
             )}
 
-            {container.status !== 'running' && (
+            {container.state === 'running' && (
               <Button
-                variant="danger"
+                variant="secondary"
                 onClick={() => handleAction('stop')}
                 isLoading={actionInProgress === 'stop'}
                 icon={<Square className="h-4 w-4" />}
@@ -138,24 +138,29 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
               </Button>
             )}
 
-            <Button
-              variant="secondary"
-              onClick={() => handleAction('restart')}
-              isLoading={actionInProgress === 'restart'}
-              icon={<RotateCcw className="h-4 w-4" />}
-            >
-              Restart
-            </Button>
+            {container.state === 'running' && (
+              <Button
+                variant="secondary"
+                onClick={() => handleAction('restart')}
+                isLoading={actionInProgress === 'restart'}
+                icon={<RotateCcw className="h-4 w-4" />}
+              >
+                Restart
+              </Button>
+            )}
+
           </div>
 
-          <Button
-            variant="danger"
-            onClick={() => handleAction('delete')}
-            isLoading={actionInProgress === 'delete'}
-            icon={<Trash2 className="h-4 w-4" />}
-          >
-            Delete
-          </Button>
+          {container.state !== 'running' && (
+            <Button
+              variant="danger"
+              onClick={() => handleAction('delete')}
+              isLoading={actionInProgress === 'delete'}
+              icon={<Trash2 className="h-4 w-4" />}
+            >
+              Delete
+            </Button>
+          )}
         </div>
       </div>
     </div>

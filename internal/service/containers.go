@@ -3,8 +3,10 @@ package service
 import (
 	"context"
 	"io"
+	"strconv"
 
 	"github.com/charmbracelet/log"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 )
@@ -27,4 +29,17 @@ func (c *ContainerService) PullContainerImage(cli *client.Client, ctx context.Co
 	}
 
 	return reader, nil
+}
+
+func (c *ContainerService) ParsePorts(ports []container.Port) map[string]string {
+	parsedPorts := make(map[string]string, len(ports))
+	for _, v := range ports {
+		private := strconv.Itoa(int(v.PrivatePort))
+		public := strconv.Itoa(int(v.PublicPort))
+		if _, ok := parsedPorts[private]; !ok {
+			parsedPorts[private] = public
+		}
+	}
+
+	return parsedPorts
 }

@@ -54,22 +54,21 @@ const ContainerCard: React.FC<ContainerCardProps> = ({ container, onClick }) => 
             <p className="text-sm text-gray-500">{container.image}</p>
           </div>
         </div>
-        <div className={`px-2.5 py-0.5 rounded-full text-xs flex items-center space-x-1 ${statusColors[container.status]}`}>
+        <div className={`px-2.5 py-0.5 rounded-full text-xs flex items-center space-x-1 ${statusColors[container.state]}`}>
           <span>{statusIcon()}</span>
-          <span className="capitalize">{container.status}</span>
+          <span className="capitalize">{container.state}</span>
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-4">
-        <p className="text-sm text-red-600">To be added</p>
+      <div className="mt-4 grid grid-cols-2 gap-4">
         <div>
           <p className="text-xs text-gray-500">CPU Usage</p>
-          <p className="text-sm font-medium">{container.Stats.cpu_usage.toFixed(1)}%</p>
+          <p className="text-sm font-medium">{(container.Stats.cpu_usage / 1024 ** 3).toFixed(1)}%</p>
         </div>
         <div>
           <p className="text-xs text-gray-500">Memory</p>
           <p className="text-sm font-medium">
-            {container.Stats.mem_usage} MB / {container.Stats.mem_total} MB
+            {(container.Stats.mem_usage / 1024 ** 2).toFixed(2)} MB / {(container.Stats.mem_total / 1024 ** 2).toFixed(2)} MB
           </p>
         </div>
       </div>

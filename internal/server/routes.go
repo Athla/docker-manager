@@ -50,7 +50,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	// SSE
 	containers.GET("/:id/logs", containerHandler.StreamLogContainers)
 
-	// containers.GET("/:id/stats", containerHandler.StreamContainerStat)
+	containers.GET("/:id/stats", containerHandler.StreamStatContainers)
 
 	return e
 }

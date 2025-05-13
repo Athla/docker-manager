@@ -1,9 +1,12 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Container, CreateOptions } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 export const useContainers = () => {
+  const [logs, setLogs] = useState<string[]>([])
+  const [logsError, setLogsError] = useState<string | null>(null)
+  const logsEventSourceRef = useRef<EventSource | null>(null)
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -116,20 +119,6 @@ export const useContainers = () => {
     }
   }, [fetchContainers])
 
-  // containers.GET("/:id/logs", containerHandler.StreamLogContainers)
-  const fetchContainerLogs = useCallback(async (containerId: string) => {
-    const [logs, setLogs] = useState<string[]>([])
-    const eventSource = new EventSource(`${API_URL}/containers/${containerId}/logs`)
-    eventSource.onmessage = (event: MessageEvent) => {
-      try {
-        const
-
-      } catch {
-
-      }
-    }
-  }, [])
-
   const fetchContainerMetrics = useCallback(async (containerId: string) => {
     try {
 
@@ -137,6 +126,39 @@ export const useContainers = () => {
 
     }
   }, [])
+  // containers.GET("/:id/logs", containerHandler.StreamLogContainers)
+  const fetchContainerLogs = useCallback(async (containerId: string) => {
+    if (logsEventSourceRef.current) {
+      logsEventSourceRef.current.close()
+    }
+
+    setLogs([])
+    setLogsError(null)
+
+    const eventSource = new EventSource(`${API_URL}/containers/${containerId}/logs`)
+    logsEventSourceRef.current = eventSource
+
+    eventSource.onmessage = (event: MessageEvent) => {
+      try {
+        const newLogs: string[] = JSON.parse(event.data)
+        setLogs(newLogs)
+      } catch (err) {
+        setLogsError(`Failed to parse logs from SSE for id: ${containerId}`)
+        setError(`Failed to parse logs from SSE for id: ${containerId}`)
+        eventSource.close()
+      }
+    }
+
+    eventSource.onerror = () => {
+      setLogsError(`Failed to parse logs from SSE for id: ${containerId}`)
+      eventSource.close()
+    }
+
+    return () => {
+      eventSource.close()
+    }
+  }, [])
+
 
   return {
     containers,
@@ -149,7 +171,9 @@ export const useContainers = () => {
     deleteContainer,
     createContainer,
     fetchContainerLogs,
-    fetchContainerMetrics
+    fetchContainerMetrics,
+    logs,
+    logsError
   }
     ;
 };

@@ -47,6 +47,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	containers.POST("/:id/stop", containerHandler.StopContainer)
 	containers.POST("/:id/restart", containerHandler.RestartContainer)
 	containers.GET("/:id/stats", containerHandler.GetContainerStats)
+	containers.GET("/:id/credentials", containerHandler.GetContainerCredentails)
 	// SSE
 	containers.GET("/:id/logs", containerHandler.StreamLogContainers)
 

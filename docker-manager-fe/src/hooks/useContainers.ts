@@ -4,9 +4,14 @@ import { Container, CreateOptions } from '../types';
 const API_URL = import.meta.env.VITE_API_URL;
 
 export const useContainers = () => {
+  const logsEventSourceRef = useRef<EventSource | null>(null)
   const [logs, setLogs] = useState<string[]>([])
   const [logsError, setLogsError] = useState<string | null>(null)
-  const logsEventSourceRef = useRef<EventSource | null>(null)
+
+  const statsEventSourceRef = useRef<EventSource | null>(null)
+  const [stats, setStats] = useState<string | null>(null)
+  const [statsError, setStatsError] = useState<string | null>(null)
+
   const [containers, setContainers] = useState<Container[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -119,14 +124,40 @@ export const useContainers = () => {
     }
   }, [fetchContainers])
 
+
   const fetchContainerMetrics = useCallback(async (containerId: string) => {
-    try {
+    if (statsEventSourceRef.current) {
+      statsEventSourceRef.current.close()
+    }
 
-    } catch {
+    setStats(null)
+    setStatsError(null)
 
+    const eventSource = new EventSource(`${API_URL}/containers/${containerId}/stats`)
+    statsEventSourceRef.current = eventSource
+
+    eventSource.onmessage = (event: MessageEvent) => {
+      try {
+        const newStats: string = JSON.parse(event.data)
+        console.log(event.data)
+        setStats(newStats)
+      } catch (err) {
+        setStatsError(`Failed to parse stas from SSE for id: ${containerId}`)
+        setError(`Failed to parse stas from SSE for id: ${containerId}`)
+        eventSource.close()
+      }
+    }
+
+    eventSource.onerror = () => {
+      setStatsError(`Failed to parse stas from SSE for id: ${containerId}`)
+      eventSource.close()
+    }
+
+    return () => {
+      eventSource.close()
     }
   }, [])
-  // containers.GET("/:id/logs", containerHandler.StreamLogContainers)
+
   const fetchContainerLogs = useCallback(async (containerId: string) => {
     if (logsEventSourceRef.current) {
       logsEventSourceRef.current.close()
@@ -141,8 +172,11 @@ export const useContainers = () => {
     eventSource.onmessage = (event: MessageEvent) => {
       try {
         const newLogs: string[] = JSON.parse(event.data)
+        console.log(event.data)
+        console.log("Logs case")
         setLogs(newLogs)
       } catch (err) {
+        console.log('JSON parse error:', err, 'Data:', event.data);
         setLogsError(`Failed to parse logs from SSE for id: ${containerId}`)
         setError(`Failed to parse logs from SSE for id: ${containerId}`)
         eventSource.close()
@@ -173,7 +207,9 @@ export const useContainers = () => {
     fetchContainerLogs,
     fetchContainerMetrics,
     logs,
-    logsError
+    logsError,
+    stats,
+    statsError
   }
     ;
 };

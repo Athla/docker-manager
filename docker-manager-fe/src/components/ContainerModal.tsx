@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Container } from '../types';
+import React, { useEffect, useState } from 'react';
 import { X, Play, RotateCcw, Square, Trash2 } from 'lucide-react';
 import Button from './Button';
+import { Container } from '../types';
 
 interface ContainerModalProps {
   container: Container;
@@ -10,7 +10,14 @@ interface ContainerModalProps {
   onStop: (id: string) => Promise<boolean>;
   onRestart: (id: string) => Promise<boolean>;
   onDelete: (id: string) => Promise<boolean>;
+  fetchContainerLogs: (containerId: string) => void;
+  fetchContainerMetrics: (containerId: string) => void;
+  logs: string[];
+  logsError: string | null;
+  stats: string | null;
+  statsError: string | null;
 }
+
 
 const ContainerModal: React.FC<ContainerModalProps> = ({
   container,
@@ -19,11 +26,28 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
   onStop,
   onRestart,
   onDelete,
+  fetchContainerLogs,
+  fetchContainerMetrics,
+  logs,
+  logsError,
+  stats,
+  statsError
 }) => {
-  const [activeTab, setActiveTab] = useState<'logs' | 'metrics'>('logs');
-  //const [logs, setLogs] = useState<ContainerLog[]>([]);
-  //const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'logs' | 'metrics' | 'credentials'>('logs');
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
+
+  useEffect(() => {
+
+    const cleanup = () => { }
+
+    if (activeTab === 'logs') {
+      fetchContainerLogs(container.id)
+    } else if (activeTab === 'metrics') {
+      fetchContainerMetrics(container.id)
+    }
+
+    return cleanup
+  }, [container.id, activeTab, fetchContainerLogs, fetchContainerMetrics])
 
   const handleAction = async (action: 'start' | 'stop' | 'restart' | 'delete') => {
     setActionInProgress(action);
@@ -58,6 +82,58 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
       console.error(`Failed to ${action} container:`, error);
     } finally {
       setActionInProgress(null);
+    }
+  };
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'logs':
+        if (logsError) {
+          return <div className="p-4 text-red-500">{logsError}</div>;
+        }
+
+        return (
+          <div className="bg-gray-900 text-gray-200 p-4 font-mono text-sm overflow-auto h-96">
+            {logs && logs.length > 0 ? (
+              logs.map((log, index) => (
+                <div key={index} className="py-1">
+                  {log}
+                </div>
+              ))
+            ) : (
+              <div className="text-gray-400">TBA - Logs not yet being correctly fetched.</div>
+            )}
+          </div>
+        );
+
+      case 'metrics':
+        if (statsError) {
+          return <div className="p-4 text-red-500">{statsError}</div>;
+        }
+
+        return (
+          <div className="p-4 h-96 overflow-auto">
+            {stats != null ? (
+              <div className="space-y-4">
+                <div className="bg-white p-4 rounded-lg shadow">
+                  <h3 className="text-lg font-medium text-gray-900">Container Stats</h3>
+                  <pre className="mt-2 bg-gray-100 p-3 rounded text-sm overflow-x-auto">
+                    TBA - It's fetching the metrics from the back-end but not rendering
+                  </pre>
+                </div>
+              </div>
+            ) : (
+              <div className="text-gray-500">No metrics available</div>
+            )}
+          </div>
+        );
+
+      case 'credentials':
+        return (
+          <div className="p-4 h-96 overflow-auto">
+            <div className="text-gray-500">TBA - WIP</div>
+          </div>
+        );
     }
   };
 
@@ -111,9 +187,23 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
             >
               Metrics
             </button>
+            <button
+              onClick={() => setActiveTab('credentials')}
+              className={`
+                py-3 px-3 border-b-2 font-medium text-sm
+                ${activeTab === 'credentials'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}
+              `}
+            >
+              Credetials
+            </button>
           </nav>
         </div>
 
+        <div className='flex-grow overflow-auto'>
+          {renderTabContent()}
+        </div>
 
         <div className="border-t border-gray-200 p-4 bg-gray-50 flex justify-between">
           <div className="flex space-x-3">

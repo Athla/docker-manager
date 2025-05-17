@@ -17,7 +17,13 @@ const Dashboard: React.FC = () => {
     stopContainer,
     restartContainer,
     deleteContainer,
-    createContainer
+    createContainer,
+    fetchContainerLogs,
+    fetchContainerMetrics,
+    logs,
+    logsError,
+    stats,
+    statsError
   } = useContainers();
 
   const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
@@ -123,6 +129,12 @@ const Dashboard: React.FC = () => {
           onStop={stopContainer}
           onRestart={restartContainer}
           onDelete={deleteContainer}
+          fetchContainerMetrics={fetchContainerMetrics}
+          fetchContainerLogs={fetchContainerLogs}
+          logs={logs || []}  // Provide empty array as fallback
+          logsError={logsError}
+          stats={stats || null}  // Provide empty array as fallback
+          statsError={statsError}
         />
       )}
 

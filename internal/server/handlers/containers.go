@@ -16,7 +16,6 @@ import (
 )
 
 type ContainerHandler struct {
-	ctx context.Context
 	svc *service.ContainerService
 }
 
@@ -60,7 +59,7 @@ func (s *ContainerHandler) CreateContainerHandler(e echo.Context) error {
 	// Parse image name - service
 	imageName := fmt.Sprintf("%s/%s:%s", opts.Registry, opts.Image, opts.Version)
 
-	reader, err := s.svc.PullContainerImage(cli, s.ctx, imageName, image.PullOptions{})
+	reader, err := s.svc.PullContainerImage(cli, context.Background(), imageName, image.PullOptions{})
 	if err != nil {
 		e.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "internal server error.",
@@ -69,7 +68,7 @@ func (s *ContainerHandler) CreateContainerHandler(e echo.Context) error {
 	}
 	defer reader.Close()
 
-	resp, err := createDockerContainer(s.ctx, cli, reader, opts, imageName)
+	resp, err := createDockerContainer(context.Background(), cli, reader, opts, imageName)
 	if err != nil {
 		e.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "internal server error.",
@@ -79,7 +78,7 @@ func (s *ContainerHandler) CreateContainerHandler(e echo.Context) error {
 	}
 
 	log.Infof("CONTAINER: Container ID: %s", resp.ID)
-	if err := cli.ContainerStart(s.ctx, resp.ID, container.StartOptions{}); err != nil {
+	if err := cli.ContainerStart(context.Background(), resp.ID, container.StartOptions{}); err != nil {
 		log.Warnf("CONTAINER: Unable to start container due: %s", err)
 		e.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "internal server error.",
@@ -112,7 +111,7 @@ func (s *ContainerHandler) DeleteContainerHandler(e echo.Context) error {
 		RemoveVolumes: false,
 	}
 
-	if err := cli.ContainerRemove(s.ctx, id, removeOptions); err != nil {
+	if err := cli.ContainerRemove(context.Background(), id, removeOptions); err != nil {
 		log.Warnf("CONTAINER-DELETE: Unable to delete container due: %s", err)
 		e.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "internal server error.",
@@ -146,7 +145,7 @@ func (s *ContainerHandler) ListContainersHandler(e echo.Context) error {
 	}
 	defer cli.Close()
 
-	containers, err := cli.ContainerList(s.ctx, container.ListOptions{All: true})
+	containers, err := cli.ContainerList(context.Background(), container.ListOptions{All: true})
 	if err != nil {
 		log.Warnf("CONTAINER-CLIENT: Unable to get containers due: %s", err)
 		e.JSON(http.StatusInternalServerError, map[string]string{
@@ -157,7 +156,7 @@ func (s *ContainerHandler) ListContainersHandler(e echo.Context) error {
 
 	var out []models.Container
 	for _, box := range containers {
-		statsReader, err := cli.ContainerStats(s.ctx, box.ID, false)
+		statsReader, err := cli.ContainerStats(context.Background(), box.ID, false)
 		if err != nil {
 			log.Warnf("CONTAINER-CLIENT: Unable to get container stats: %s", err)
 			return e.JSON(http.StatusInternalServerError, map[string]string{
@@ -212,7 +211,7 @@ func (s *ContainerHandler) StartContainer(e echo.Context) error {
 
 	defer cli.Close()
 
-	if err := cli.ContainerStart(s.ctx, id, container.StartOptions{}); err != nil {
+	if err := cli.ContainerStart(context.Background(), id, container.StartOptions{}); err != nil {
 		log.Warnf("CONTAINER-CLIENT: Unable to start docker container due: %s", err)
 		return e.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to start container",
@@ -239,7 +238,7 @@ func (s *ContainerHandler) StopContainer(e echo.Context) error {
 	defer cli.Close()
 
 	timeout := 10
-	if err := cli.ContainerStop(s.ctx, id, container.StopOptions{Timeout: &timeout}); err != nil {
+	if err := cli.ContainerStop(context.Background(), id, container.StopOptions{Timeout: &timeout}); err != nil {
 		log.Warnf("CONTAINER-CLIENT: Unable to stop docker container due: %s", err)
 		return e.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to stop container",
@@ -266,7 +265,7 @@ func (s *ContainerHandler) RestartContainer(e echo.Context) error {
 	defer cli.Close()
 
 	timeout := 10
-	if err := cli.ContainerRestart(s.ctx, id, container.StopOptions{Timeout: &timeout}); err != nil {
+	if err := cli.ContainerRestart(context.Background(), id, container.StopOptions{Timeout: &timeout}); err != nil {
 		log.Warnf("CONTAINER-RESTART: Unable to restart docker container due: %s", err)
 		return e.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to stop container",
@@ -290,7 +289,7 @@ func (s *ContainerHandler) GetContainerStats(e echo.Context) error {
 
 	defer cli.Close()
 
-	statsReader, err := cli.ContainerStats(s.ctx, id, false)
+	statsReader, err := cli.ContainerStats(context.Background(), id, false)
 	if err != nil {
 		log.Warnf("CONTAINER-CLIENT: Unable to get container stats: %s", err)
 		return e.JSON(http.StatusInternalServerError, map[string]string{
@@ -314,4 +313,27 @@ func (s *ContainerHandler) GetContainerStats(e echo.Context) error {
 	}
 
 	return e.JSON(http.StatusOK, statsResponse)
+}
+
+func (s *ContainerHandler) GetContainerCredentails(e echo.Context) error {
+	id := e.Param("id")
+	cli, err := newDockerClient(client.FromEnv)
+	if err != nil {
+		log.Warnf("CONTAINER-CLIENT: Unable to create docker client due: %s", err)
+		return e.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "internal server error",
+		})
+	}
+
+	defer cli.Close()
+
+	containerJSON, err := cli.ContainerInspect(context.Background(), id)
+	if err != nil {
+		log.Warnf("CONTAINER-CLIENT: Unable to inspect container data due: %s", err)
+		return e.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "internal server error",
+		})
+	}
+
+	return e.JSON(http.StatusOK, containerJSON)
 }

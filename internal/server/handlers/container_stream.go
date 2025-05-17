@@ -1,13 +1,14 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/charmbracelet/log"
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/labstack/echo/v4"
@@ -26,7 +27,7 @@ func (s *ContainerHandler) StreamStatContainers(e echo.Context) error {
 	}
 	defer cli.Close()
 
-	stats, err := cli.ContainerStats(s.ctx, containerId, true)
+	stats, err := cli.ContainerStats(context.Background(), containerId, true)
 	if err != nil {
 		log.Warnf("CONTAINER-CLIENT: Unable to create docker reader due: %s", err)
 		e.JSON(http.StatusInternalServerError, map[string]string{
@@ -111,7 +112,7 @@ func (s *ContainerHandler) StreamLogContainers(e echo.Context) error {
 		Tail:       "20",
 	}
 
-	reader, err := cli.ContainerLogs(s.ctx, containerId, options)
+	reader, err := cli.ContainerLogs(context.Background(), containerId, options)
 	if err != nil {
 		log.Warnf("CONTAINER-CLIENT: Unable to create docker reader due: %s", err)
 		e.JSON(http.StatusInternalServerError, map[string]string{
@@ -139,7 +140,7 @@ func (s *ContainerHandler) StreamLogContainers(e echo.Context) error {
 		if n > 0 {
 			logLine := string(buf[:n])
 
-			fmt.Fprintf(res, "data: %s\n\n", logLine)
+			fmt.Fprintf(res, `%s\n\n`, strings.TrimPrefix(".", logLine))
 			flusher.Flush()
 		}
 

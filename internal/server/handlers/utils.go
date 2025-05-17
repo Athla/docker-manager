@@ -14,7 +14,6 @@ import (
 func NewContainerHandler(ctx context.Context) *ContainerHandler {
 	svc := service.NewContainerService(ctx)
 	return &ContainerHandler{
-		ctx: ctx,
 		svc: svc,
 	}
 }

@@ -1,0 +1,271 @@
+definitions:
+  handlers.CreateOptions:
+    properties:
+      commands:
+        items:
+          type: string
+        type: array
+      image:
+        type: string
+      name:
+        type: string
+      registry:
+        type: string
+      version:
+        type: string
+    type: object
+  models.Container:
+    properties:
+      command:
+        type: string
+      created:
+        type: integer
+      id:
+        type: string
+      image:
+        type: string
+      labels:
+        additionalProperties:
+          type: string
+        type: object
+      names:
+        items:
+          type: string
+        type: array
+      ports:
+        additionalProperties:
+          type: string
+        type: object
+      state:
+        type: string
+      stats:
+        $ref: '#/definitions/models.ContainerStats'
+      status:
+        type: string
+    type: object
+  models.ContainerStats:
+    properties:
+      cpu_total:
+        type: integer
+      cpu_usage:
+        type: integer
+      mem_total:
+        type: integer
+      mem_usage:
+        type: integer
+    type: object
+  models.ErrorResponse:
+    properties:
+      Message:
+        example: Container with ID aal12345 not found.
+        type: string
+      code:
+        example: CONTAINER_NOT_FOUND
+        type: string
+      details: {}
+    type: object
+  models.SuccessResponse:
+    properties:
+      message:
+        example: Operation completed successfully
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /containers:
+    get:
+      consumes:
+      - application/json
+      description: Get a list of all Docker containers
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Container'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: List all containers
+      tags:
+      - containers
+    post:
+      consumes:
+      - application/json
+      description: Create a new Docker container with specified configuration
+      parameters:
+      - description: Container Configuration
+        in: body
+        name: container
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateOptions'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Container'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Create a new container
+      tags:
+      - containers
+  /containers/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a Docker container by ID
+      parameters:
+      - description: Container ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Delete a container
+      tags:
+      - containers
+  /containers/{id}/logs:
+    get:
+      consumes:
+      - application/json
+      description: Stream logs from a Docker container
+      parameters:
+      - description: Container ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: Server-Sent Events
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get container logs
+      tags:
+      - containers
+  /containers/{id}/start:
+    post:
+      consumes:
+      - application/json
+      description: Start a Docker container by ID
+      parameters:
+      - description: Container ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Start a container
+      tags:
+      - containers
+  /containers/{id}/stats:
+    get:
+      consumes:
+      - application/json
+      description: Stream stats from a Docker container
+      parameters:
+      - description: Container ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: Server-Sent Events
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get container stats
+      tags:
+      - containers
+  /containers/{id}/stop:
+    post:
+      consumes:
+      - application/json
+      description: Stop a Docker container by ID
+      parameters:
+      - description: Container ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.SuccessResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Stop a container
+      tags:
+      - containers
+swagger: "2.0"

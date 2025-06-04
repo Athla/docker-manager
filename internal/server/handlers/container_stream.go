@@ -14,6 +14,16 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// @Summary Get container stats
+// @Description Stream stats from a Docker container
+// @Tags containers
+// @Accept json
+// @Produce text/event-stream
+// @Param id path string true "Container ID"
+// @Success 200 {string} string "Server-Sent Events"
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /containers/{id}/stats [get]
 func (s *ContainerHandler) StreamStatContainers(e echo.Context) error {
 	containerId := e.Param("id")
 
@@ -92,6 +102,16 @@ func calculateCpuPercentUnix(v *container.StatsResponse) float64 {
 	return 0.0
 }
 
+// @Summary Get container logs
+// @Description Stream logs from a Docker container
+// @Tags containers
+// @Accept json
+// @Produce text/event-stream
+// @Param id path string true "Container ID"
+// @Success 200 {string} string "Server-Sent Events"
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /containers/{id}/logs [get]
 func (s *ContainerHandler) StreamLogContainers(e echo.Context) error {
 	containerId := e.Param("id")
 

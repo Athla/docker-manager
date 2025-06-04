@@ -27,6 +27,16 @@ type CreateOptions struct {
 	Commands []string `json:"commands"`
 }
 
+// @Summary Create a new container
+// @Description Create a new Docker container with specified configuration
+// @Tags containers
+// @Accept json
+// @Produce json
+// @Param container body CreateOptions true "Container Configuration"
+// @Success 201 {object} models.Container
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /containers [post]
 func (s *ContainerHandler) CreateContainerHandler(e echo.Context) error {
 	// Parse opts
 	opts := new(CreateOptions)
@@ -94,6 +104,16 @@ func (s *ContainerHandler) CreateContainerHandler(e echo.Context) error {
 	return nil
 }
 
+// @Summary Delete a container
+// @Description Delete a Docker container by ID
+// @Tags containers
+// @Accept json
+// @Produce json
+// @Param id path string true "Container ID"
+// @Success 200 {object} models.SuccessResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /containers/{id} [delete]
 func (s *ContainerHandler) DeleteContainerHandler(e echo.Context) error {
 	id := e.Param("id")
 	cli, err := client.NewClientWithOpts(client.FromEnv)
@@ -135,6 +155,14 @@ func (s *ContainerHandler) DeleteAllContainersHandler(e echo.Context) error {
 	return nil
 }
 
+// @Summary List all containers
+// @Description Get a list of all Docker containers
+// @Tags containers
+// @Accept json
+// @Produce json
+// @Success 200 {array} models.Container
+// @Failure 500 {object} models.ErrorResponse
+// @Router /containers [get]
 func (s *ContainerHandler) ListContainersHandler(e echo.Context) error {
 	cli, err := newDockerClient(client.FromEnv)
 	if err != nil {
@@ -199,6 +227,16 @@ func (s *ContainerHandler) ListContainersHandler(e echo.Context) error {
 	return nil
 }
 
+// @Summary Start a container
+// @Description Start a Docker container by ID
+// @Tags containers
+// @Accept json
+// @Produce json
+// @Param id path string true "Container ID"
+// @Success 200 {object} models.SuccessResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /containers/{id}/start [post]
 func (s *ContainerHandler) StartContainer(e echo.Context) error {
 	id := e.Param("id")
 	cli, err := newDockerClient(client.FromEnv)
@@ -225,6 +263,16 @@ func (s *ContainerHandler) StartContainer(e echo.Context) error {
 	})
 }
 
+// @Summary Stop a container
+// @Description Stop a Docker container by ID
+// @Tags containers
+// @Accept json
+// @Produce json
+// @Param id path string true "Container ID"
+// @Success 200 {object} models.SuccessResponse
+// @Failure 404 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /containers/{id}/stop [post]
 func (s *ContainerHandler) StopContainer(e echo.Context) error {
 	id := e.Param("id")
 	cli, err := newDockerClient(client.FromEnv)

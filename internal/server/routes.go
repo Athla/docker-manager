@@ -7,6 +7,8 @@ import (
 	"github.com/charmbracelet/log"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"github.com/swaggo/echo-swagger"
+	_ "mineServers/internal/docs"
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
@@ -25,6 +27,8 @@ func (s *Server) RegisterRoutes() http.Handler {
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
+
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
 	e.GET("/", s.HelloWorldHandler)
 

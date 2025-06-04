@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { X, Play, RotateCcw, Square, Trash2 } from 'lucide-react';
 import Button from './Button';
 import { Container } from '../types';
+import { useToast } from '../contexts/ToatsContext';
+import { AppError } from '../types/errors';
 
 interface ContainerModalProps {
   container: Container;
@@ -49,6 +51,8 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
     return cleanup
   }, [container.id, activeTab, fetchContainerLogs, fetchContainerMetrics])
 
+  const { showToast } = useToast()
+
   const handleAction = async (action: 'start' | 'stop' | 'restart' | 'delete') => {
     setActionInProgress(action);
 
@@ -74,12 +78,29 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
           break;
       }
 
+      if (success) {
+        showToast({
+          type: 'success',
+          message: `Container  ${action}ed sucessefully!`
+        })
+      } else {
+        throw new AppError(
+          'ACTION_FAILED',
+          `Failed to ${action} container`
+        )
+      }
+
       if (success && action !== 'delete') {
         // Refresh logs and metrics after action
         console.log("Metrics soon")
       }
     } catch (error) {
-      console.error(`Failed to ${action} container:`, error);
+      const message = error instanceof AppError ? error.message : 'An unexpected error occurred!'
+
+      showToast({
+        type: 'error',
+        message
+      })
     } finally {
       setActionInProgress(null);
     }

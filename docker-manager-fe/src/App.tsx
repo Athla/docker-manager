@@ -1,5 +1,5 @@
 import Dashboard from './components/Dashboard';
-import { ToastProviuder as ToastProvider } from './contexts/ToatsContext';
+import { ToastProvider } from './contexts/ToatsContext';
 
 function App() {
   return (

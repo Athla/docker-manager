@@ -63,7 +63,7 @@ const ContainerCard: React.FC<ContainerCardProps> = ({ container, onClick }) => 
       <div className="mt-4 grid grid-cols-2 gap-4">
         <div>
           <p className="text-xs text-gray-500">CPU Usage</p>
-          <p className="text-sm font-medium">{(container.Stats.cpu_usage / 1024 ** 3).toFixed(1)}%</p>
+          <p className="text-sm font-medium">{(container.Stats.cpu_usage / 1024 ** 3).toFixed(2)}%</p>
         </div>
         <div>
           <p className="text-xs text-gray-500">Memory</p>

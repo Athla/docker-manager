@@ -68,7 +68,7 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
       unitIndex++
     }
 
-    return `${size.toFixed(1)} ${units[unitIndex]}`
+    return `${size.toFixed(2)} ${units[unitIndex]}`
   }
 
   const handleAction = async (action: 'start' | 'stop' | 'restart' | 'delete') => {
@@ -143,7 +143,7 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
                 <div className="flex mb-2 items-center justify-between">
                   <div>
                     <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200">
-                      {metrics.cpu_percent.toFixed(1)}%
+                      {metrics.cpu_percent.toFixed(2)}%
                     </span>
                   </div>
                 </div>
@@ -164,7 +164,7 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
                 <div className="flex mb-2 items-center justify-between">
                   <div>
                     <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">
-                      {metrics.mem_percent.toFixed(1)}%
+                      {metrics.mem_percent.toFixed(2)}%
                     </span>
                   </div>
                 </div>

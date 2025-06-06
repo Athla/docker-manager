@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { X, Play, RotateCcw, Square, Trash2 } from 'lucide-react';
 import Button from './Button';
 import { Container } from '../types';
 import { useToast } from '../contexts/ToatsContext';
 import { AppError } from '../types/errors';
+import { useSSE } from '../hooks/useSSE';
 
 interface ContainerModalProps {
   container: Container;
@@ -28,30 +29,47 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
   onStop,
   onRestart,
   onDelete,
-  fetchContainerLogs,
-  fetchContainerMetrics,
-  logs,
-  logsError,
-  stats,
-  statsError
 }) => {
   const [activeTab, setActiveTab] = useState<'logs' | 'metrics' | 'credentials'>('logs');
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
+  const [metrics, setMetrics] = useState<{
+    cpu_percent: number,
+    mem_percent: number,
+    mem_limit: number,
+    mem_usage: number,
+  } | null>(null)
+  const [logs, setLogs] = useState<string[]>([])
 
-  useEffect(() => {
-
-    const cleanup = () => { }
-
-    if (activeTab === 'logs') {
-      fetchContainerLogs(container.id)
-    } else if (activeTab === 'metrics') {
-      fetchContainerMetrics(container.id)
+  useSSE(`/containers/${container.id}/stats`, {
+    onMessage: (data) => {
+      setMetrics(data)
+    },
+    onError: (error) => {
+      console.error('Error in metrics stream:', error)
     }
+  })
 
-    return cleanup
-  }, [container.id, activeTab, fetchContainerLogs, fetchContainerMetrics])
+  useSSE(`/containers/${container.id}/logs`, {
+    onMessage: (data) => {
+      setLogs(prev => [...prev, data].slice(-100))
+    },
+    onError: (error) => {
+      console.error('Error in log stream:', error)
+    }
+  })
 
   const { showToast } = useToast()
+  const formatBytes = (bytes: number): string => {
+    const units = ['B', 'KB', 'MB', 'GB']
+    let size = bytes
+    let unitIndex = 0
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++
+    }
+
+    return `${size.toFixed(1)} ${units[unitIndex]}`
+  }
 
   const handleAction = async (action: 'start' | 'stop' | 'restart' | 'delete') => {
     setActionInProgress(action);
@@ -106,55 +124,99 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
     }
   };
 
+  const renderMetrics = () => {
+    if (!metrics) {
+      return (
+        <div className='text-gray-500 p-4'>
+          Waiting for metrics...
+        </div>
+      )
+    }
+
+    return (
+      <div className="p-4 space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h3 className="text-sm font-medium text-gray-500">CPU Usage</h3>
+            <div className="mt-2">
+              <div className="relative pt-1">
+                <div className="flex mb-2 items-center justify-between">
+                  <div>
+                    <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200">
+                      {metrics.cpu_percent.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+                <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-200">
+                  <div
+                    style={{ width: `${metrics.cpu_percent}%` }}
+                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h3 className="text-sm font-medium text-gray-500">Memory Usage</h3>
+            <div className="mt-2">
+              <div className="relative pt-1">
+                <div className="flex mb-2 items-center justify-between">
+                  <div>
+                    <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-green-600 bg-green-200">
+                      {metrics.mem_percent.toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+                <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-green-200">
+                  <div
+                    style={{ width: `${metrics.mem_percent}%` }}
+                    className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500"
+                  />
+                </div>
+              </div>
+              <div className="text-xs text-gray-500">
+                {formatBytes(metrics.mem_usage)} / {formatBytes(metrics.mem_limit)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const renderLogs = () => {
+    if (logs.length === 0 || logs === void []) {
+      return (
+        <div className='text-gray-500 p-4'>
+          Waiting for logs...
+        </div>
+      )
+    }
+
+    return (
+      <div className='bg-gray-900 text-gray-200 p-4 font-mono text-sm overflow-auto h-96'>
+        {logs.map((log, index) => {
+          <div key={index} className='py-1'>
+            {log}
+          </div>
+        })}
+      </div>
+    )
+  }
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'logs':
-        if (logsError) {
-          return <div className="p-4 text-red-500">{logsError}</div>;
-        }
-
-        return (
-          <div className="bg-gray-900 text-gray-200 p-4 font-mono text-sm overflow-auto h-96">
-            {logs && logs.length > 0 ? (
-              logs.map((log, index) => (
-                <div key={index} className="py-1">
-                  {log}
-                </div>
-              ))
-            ) : (
-              <div className="text-gray-400">TBA - Logs not yet being correctly fetched.</div>
-            )}
-          </div>
-        );
-
+        return renderLogs()
       case 'metrics':
-        if (statsError) {
-          return <div className="p-4 text-red-500">{statsError}</div>;
-        }
-
-        return (
-          <div className="p-4 h-96 overflow-auto">
-            {stats != null ? (
-              <div className="space-y-4">
-                <div className="bg-white p-4 rounded-lg shadow">
-                  <h3 className="text-lg font-medium text-gray-900">Container Stats</h3>
-                  <pre className="mt-2 bg-gray-100 p-3 rounded text-sm overflow-x-auto">
-                    TBA - It's fetching the metrics from the back-end but not rendering
-                  </pre>
-                </div>
-              </div>
-            ) : (
-              <div className="text-gray-500">No metrics available</div>
-            )}
-          </div>
-        );
-
+        return renderMetrics()
       case 'credentials':
         return (
-          <div className="p-4 h-96 overflow-auto">
-            <div className="text-gray-500">TBA - WIP</div>
+          <div className='p-4'>
+            <p className='text-gray-500'>Credentials mamagement comming soon!</p>
           </div>
-        );
+        )
     }
   };
 

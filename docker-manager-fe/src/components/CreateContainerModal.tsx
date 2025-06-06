@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import Button from './Button';
 
-
 interface CreateContainerFormState {
   name: string,
   registry: string,
@@ -28,6 +27,23 @@ const CreateContainerModal: React.FC<CreateContainerModalProps> = ({ onClose, on
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [_, setError] = useState<string | null>(null);
+  //const { showToast } = useToast()
+  // Disabled for consistency
+  //const handleCreate = async (data: CreateOptions) => {
+  //  const success = await onCreateContainer(data);
+  //  if (success) {
+  //    showToast({
+  //      type: 'success',
+  //      message: 'Container created succesfully!'
+  //    })
+  //    onClose()
+  //  } else {
+  //    showToast({
+  //      type: 'error',
+  //      message: 'Failed to create container.'
+  //    })
+  //  }
+  //}
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>

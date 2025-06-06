@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mineServers/internal/models"
 	"net/http"
 	"strings"
 
@@ -12,6 +13,17 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/labstack/echo/v4"
+)
+
+var (
+	dockerClientErrResponse = models.ErrorResponse{
+		Code:    "DOCKER_CLIENT_ERROR",
+		Message: "Failed to connect to Docker Daemon",
+	}
+	dockerReaderErrResponse = models.ErrorResponse{
+		Code:    "DOCKER_READER_ERROR",
+		Message: "Failed to create Docker Reader",
+	}
 )
 
 // @Summary Get container stats
@@ -30,9 +42,7 @@ func (s *ContainerHandler) StreamStatContainers(e echo.Context) error {
 	cli, err := newDockerClient(client.FromEnv)
 	if err != nil {
 		log.Warnf("CONTAINER-CLIENT: Unable to create docker client due: %s", err)
-		e.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "internal server error.",
-		})
+		e.JSON(http.StatusInternalServerError, dockerClientErrResponse)
 		return err
 	}
 	defer cli.Close()
@@ -40,9 +50,7 @@ func (s *ContainerHandler) StreamStatContainers(e echo.Context) error {
 	stats, err := cli.ContainerStats(context.Background(), containerId, true)
 	if err != nil {
 		log.Warnf("CONTAINER-CLIENT: Unable to create docker reader due: %s", err)
-		e.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "internal server error.",
-		})
+		e.JSON(http.StatusInternalServerError, dockerReaderErrResponse)
 
 		return err
 	}
@@ -114,13 +122,13 @@ func calculateCpuPercentUnix(v *container.StatsResponse) float64 {
 // @Router /containers/{id}/logs [get]
 func (s *ContainerHandler) StreamLogContainers(e echo.Context) error {
 	containerId := e.Param("id")
+	ctx, cancel := context.WithCancel(e.Request().Context())
+	defer cancel()
 
 	cli, err := newDockerClient(client.FromEnv)
 	if err != nil {
 		log.Warnf("CONTAINER-CLIENT: Unable to create docker client due: %s", err)
-		e.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "internal server error.",
-		})
+		e.JSON(http.StatusInternalServerError, dockerClientErrResponse)
 		return err
 	}
 	defer cli.Close()
@@ -135,9 +143,7 @@ func (s *ContainerHandler) StreamLogContainers(e echo.Context) error {
 	reader, err := cli.ContainerLogs(context.Background(), containerId, options)
 	if err != nil {
 		log.Warnf("CONTAINER-CLIENT: Unable to create docker reader due: %s", err)
-		e.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "internal server error.",
-		})
+		e.JSON(http.StatusInternalServerError, dockerReaderErrResponse)
 
 		return err
 	}
@@ -149,6 +155,10 @@ func (s *ContainerHandler) StreamLogContainers(e echo.Context) error {
 	res.Header().Set("Connection", "keep-alive")
 	res.WriteHeader(http.StatusOK)
 
+	go func() {
+		<-ctx.Done()
+		reader.Close()
+	}()
 	flusher, ok := res.Writer.(http.Flusher)
 	if !ok {
 		return e.NoContent(http.StatusInternalServerError)

@@ -8,10 +8,14 @@ interface SSEOptions {
 const API_URL = import.meta.env.VITE_API_URL;
 //(`${API_URL}/containers/`)
 export const useSSE = (url: string, options: SSEOptions) => {
-  const [err, setErr] = useState<Event | null>(null)
+  const [status, setStatus] = useState<'connecting' | 'connected' | 'error'>('connecting')
 
   useEffect(() => {
     const eventSource = new EventSource(`${API_URL}${url}`)
+
+    eventSource.onopen = () => {
+      setStatus('connected')
+    }
 
     eventSource.onmessage = (event) => {
       try {
@@ -23,7 +27,7 @@ export const useSSE = (url: string, options: SSEOptions) => {
     }
 
     eventSource.onerror = (err) => {
-      setErr(err)
+      setStatus('error')
       options.onError?.(err)
       eventSource.close()
     }
@@ -33,6 +37,6 @@ export const useSSE = (url: string, options: SSEOptions) => {
     }
   }, [url])
 
-  return { err }
+  return { status }
 }
 

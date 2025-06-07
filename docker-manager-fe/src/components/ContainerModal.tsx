@@ -5,6 +5,7 @@ import { Container } from '../types';
 import { useToast } from '../contexts/ToatsContext';
 import { AppError } from '../types/errors';
 import { useSSE } from '../hooks/useSSE';
+import { LogsViewer } from './LogsViewer';
 
 interface ContainerModalProps {
   container: Container;
@@ -40,7 +41,7 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
   } | null>(null)
   const [logs, setLogs] = useState<string[]>([])
 
-  useSSE(`/containers/${container.id}/stats`, {
+  const { status: metricsStatus } = useSSE(`/containers/${container.id}/stats`, {
     onMessage: (data) => {
       setMetrics(data)
     },
@@ -49,7 +50,7 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
     }
   })
 
-  useSSE(`/containers/${container.id}/logs`, {
+  const { status: logStatus } = useSSE(`/containers/${container.id}/logs`, {
     onMessage: (data) => {
       setLogs(prev => [...prev, data].slice(-100))
     },
@@ -135,6 +136,17 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
 
     return (
       <div className="p-4 space-y-4">
+        <div className="flex items-center space-x-2 mb-4">
+          <span className={`w-2 h-2 rounded-full ${metricsStatus === 'connected' ? 'bg-green-500' :
+            metricsStatus === 'error' ? 'bg-red-500' :
+              'bg-yellow-500'
+            }`} />
+          <span className="text-sm text-gray-500">
+            {metricsStatus === 'connected' ? 'Connected' :
+              metricsStatus === 'error' ? 'Connection error' :
+                'Connecting...'}
+          </span>
+        </div>
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-white p-4 rounded-lg shadow">
             <h3 className="text-sm font-medium text-gray-500">CPU Usage</h3>
@@ -213,8 +225,19 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
         return renderMetrics()
       case 'credentials':
         return (
-          <div className='p-4'>
-            <p className='text-gray-500'>Credentials mamagement comming soon!</p>
+          <div>
+            <div className="flex items-center space-x-2 mb-4">
+              <span className={`w-2 h-2 rounded-full ${logStatus === 'connected' ? 'bg-green-500' :
+                logStatus === 'error' ? 'bg-red-500' :
+                  'bg-yellow-500'
+                }`} />
+              <span className="text-sm text-gray-500">
+                {logStatus === 'connected' ? 'Connected' :
+                  logStatus === 'error' ? 'Connection error' :
+                    'Connecting...'}
+              </span>
+            </div>
+            <LogsViewer logs={logs} />
           </div>
         )
     }

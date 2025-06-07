@@ -149,16 +149,17 @@ func (s *ContainerHandler) StreamLogContainers(e echo.Context) error {
 	}
 	defer reader.Close()
 
+	go func() {
+		<-ctx.Done()
+		reader.Close()
+	}()
+
 	res := e.Response()
 	res.Header().Set(echo.HeaderContentType, "text/event-stream")
 	res.Header().Set("Cache-Control", "no-cache")
 	res.Header().Set("Connection", "keep-alive")
 	res.WriteHeader(http.StatusOK)
 
-	go func() {
-		<-ctx.Done()
-		reader.Close()
-	}()
 	flusher, ok := res.Writer.(http.Flusher)
 	if !ok {
 		return e.NoContent(http.StatusInternalServerError)

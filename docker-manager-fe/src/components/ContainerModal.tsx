@@ -143,6 +143,7 @@ const ContainerModal: React.FC<ContainerModalProps> = ({
                 <div className="flex mb-2 items-center justify-between">
                   <div>
                     <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-blue-600 bg-blue-200">
+                      <p>Not Working yet.</p>
                       {metrics.cpu_percent.toFixed(2)}%
                     </span>
                   </div>

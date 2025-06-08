@@ -69,6 +69,9 @@ func (s *ContainerHandler) StreamStatContainers(e echo.Context) error {
 	}
 
 	decoder := json.NewDecoder(stats.Body)
+
+	var prevStats *container.StatsResponse
+
 	for {
 		var v *container.StatsResponse
 		if err := decoder.Decode(&v); err != nil {
@@ -78,8 +81,18 @@ func (s *ContainerHandler) StreamStatContainers(e echo.Context) error {
 
 			log.Warnf("CONTAINER-CLIENT: Error decoding stats: %v", err)
 		}
+		var cpuPercent float64
+		if prevStats != nil {
+			cpuDelta := float64(v.CPUStats.CPUUsage.TotalUsage) - float64(prevStats.CPUStats.CPUUsage.TotalUsage)
+			systemDelta := float64(v.CPUStats.SystemUsage) - float64(prevStats.CPUStats.SystemUsage)
+			if systemDelta > 0.0 && cpuDelta > 0.0 {
+				cpuPercent = (cpuDelta / systemDelta) * (float64(len(v.CPUStats.CPUUsage.PercpuUsage) * 100.0))
+			}
+		}
 
-		cpuPercent := calculateCpuPercentUnix(v)
+		prevStats = v
+
+		cpuPercent = calculateCpuPercentUnix(v)
 		memUsage := v.MemoryStats.Usage
 		memLimit := v.MemoryStats.Limit
 		memPercent := float64(memUsage) / float64(memLimit) * 100
@@ -102,7 +115,6 @@ func (s *ContainerHandler) StreamStatContainers(e echo.Context) error {
 func calculateCpuPercentUnix(v *container.StatsResponse) float64 {
 	cpuDelta := float64(v.CPUStats.CPUUsage.TotalUsage) - float64(v.PreCPUStats.CPUUsage.TotalUsage)
 	systemDelta := float64(v.CPUStats.SystemUsage) - float64(v.PreCPUStats.SystemUsage)
-
 	if systemDelta > 0.0 && cpuDelta > 0.0 {
 		return (cpuDelta / systemDelta) * (float64(len(v.CPUStats.CPUUsage.PercpuUsage)) * 100.0)
 	}
